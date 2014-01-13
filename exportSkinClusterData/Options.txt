@@ -1,0 +1,20 @@
+//////////////////////////////////////////////////////////////////
+// Options.txt - These are the base options that you selected
+//////////////////////////////////////////////////////////////////
+
+You have selected to use Maya 2014
+
+Vendor Name is: 
+
+Verbose Comments ON
+
+Plug-in type number (0-Empty, 1-MEL, 2-MEL w/Undo, 3-DG Node)
+2
+
+Maya Type Name (Plug-in Name)
+exportSkinClusterData
+
+Included Libraries:
+Foundation
+OpenMaya
+OpenMayaAnim
