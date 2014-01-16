@@ -9,6 +9,7 @@
 #include <sstream>
 #include <iostream>
 #include <utility>
+#include <list>
 
 #include <maya/MPxTransform.h>
 #include <maya/MFloatPointArray.h>
@@ -16,6 +17,8 @@
 #include <maya/MString.h>
 #include <maya/MIOStream.h>
 #include <maya/MUintArray.h>
+#include <maya/MDagPath.h>
+#include <maya/MTime.h>
 
 // include Eigen
 #include <Eigen/Core>
@@ -27,60 +30,69 @@
 class localCoord{
 public:
 	localCoord():center(new MPoint()), axisX(new MVector()), axisY(new MVector()), axisZ(new MVector()), bbox(new MVector()){};
-
-	std::shared_ptr<MPoint>	center;
-	std::shared_ptr<MVector> axisX;
-	std::shared_ptr<MVector> axisY;
+	
+	MPoint center;
+	MVector axisX;
+	MVector axisY;
 	std::shared_ptr<MVector> axisZ;
 	std::shared_ptr<MVector> bbox;
 };
 
-class rbfParameters{
+class meshNode{
 public:
-	rbfParameters(unsigned int num = 50):samplesNumber(num){};
+	MStatus update();
+// data
+public:
+	localCoord coord;
+	std::vector<MVector> rbfPosParams;
+	std::vector<MVector> rbfNormalParams;
+	std::vector<unsigned int> vertexIdxList;
+	std::shared_ptr<jointNode> joint;
 
 private:
-	unsigned int samplesNumber;
+	std::vector<MPoint> samplePoints;
 };
 
-class binaryTreeNode{
-public:
-	typedef  std::pair <unsigned int,double> indexedArea;
+class jointNode{
+public: // method
+	jointNode(unsigned int i, MDagPath dagPath, MMatrix matrix = MMatrix::identity)
+		:index(i), jointPath(dagPath), startMatrix(matrix), meshList(std::make_shared<meshNode>())
+	{};
 
-	binaryTreeNode(unsigned int i, std::string n, MMatrix m = MMatrix::identity, unsigned int num = 50)
-		:index(i), name(n), matrix(m),
-		meshIdxs(new std::vector<indexedArea>), points(new MFloatPointArray()), 
-		coord(new localCoord()), rbfs(new rbfParameters(num)){};
+	MStatus update();
 
-	unsigned int index;
-	std::string	name;
-	MMatrix matrix;
+	// observe pattern
+	void attach(std::shared_ptr<meshNode> mesh) { meshList.push_back(mesh); }     
+	void remove(std::shared_ptr<meshNode> mesh) { meshList.remove(mesh); }      
 
-	// member to store the tree structure, so do not need use new to initialize
-	std::shared_ptr<binaryTreeNode> child;
-	std::shared_ptr<binaryTreeNode> sibling;
+	void Notify() 
+	{  
+		for(auto iter = meshList.begin(); iter != meshList.end(); iter++)  
+			(*iter)->Update(); 
+	} 
 
-	// member to store the points grouped and etc, need to be initialized
-	
-	std::shared_ptr<std::vector<indexedArea>> meshIdxs;
-	std::shared_ptr<MFloatPointArray> points;
-	std::shared_ptr<localCoord> coord;
-	std::shared_ptr<rbfParameters> rbfs;
+// data
+public: 
+	unsigned int index;		// joint index in skinCluster
+	MDagPath jointPath;		// joint name
+	MMatrix	startMatrix;	// joint transform matrix in global coord at start frame
+	MMatrix	currMatrix;		// joint transform matrix in global coord at current frame
+	std::shared_ptr<jointNode> child;
+	std::shared_ptr<jointNode> sibling;
 
-private:
-	MStatus convertPointSetToSamples(MFloatPointArray & pa);
-	std::shared_ptr<MFloatPointArray> samples;
+private:  
+	std::list<std::shared_ptr<meshNode>> meshList; //meshes affected by this joint
 };
 
 class nodeOperator{
-	MStatus operator()(std::shared_ptr<binaryTreeNode> node){};
+	MStatus operator()(std::shared_ptr<jointNode> node){};
 };
 
 class printOp : nodeOperator{
 public:
 	printOp(FILE * f):file(f){};
 
-	MStatus operator()(std::shared_ptr<binaryTreeNode> node){
+	MStatus operator()(std::shared_ptr<jointNode> node){
 		fprintf(file, "joint %s ' matrix: ", node->name.c_str());
 		MMatrix mat = node->matrix;
 		for (unsigned int r = 0; r < 4; r++)
@@ -100,7 +112,7 @@ class findLevelOp : nodeOperator{
 public:
 	findLevelOp(unsigned int idx):index(idx){};
 
-	MStatus operator()(std::shared_ptr<binaryTreeNode> node){
+	MStatus operator()(std::shared_ptr<jointNode> node){
 		if (node->index == index)
 			return MStatus::kSuccess;
 		else 
@@ -114,16 +126,16 @@ class checkPointGrouplOp : nodeOperator{
 public:
 	checkPointGrouplOp(FILE * f):file(f){};
 
-	MStatus operator()(std::shared_ptr<binaryTreeNode> node){
+	MStatus operator()(std::shared_ptr<jointNode> node){
 		fprintf(file, "joint %s' points include : ", node->name.c_str());
-		std::shared_ptr<MFloatPointArray> pts = node->points;
-		int nPoints = pts->length();
-		for(int i=0; i<nPoints; i++) {
-			float* ptPtr = &(*pts)[i].x;
-			fprintf(file, " %d ", i);
-			for(int j=0; j<3; j++) {
-				fprintf(file, " %f ", ptPtr[j]);
-			}
+		std::shared_ptr<std::vector<unsigned int>> pts = node->points;
+		std::size_t nPoints = pts->size();
+		for(std::size_t i=0; i < nPoints; i++) {
+			std::size_t ptIdx = (*pts)[i];
+			//fprintf(file, " %d ", i);
+			//for(int j=0; j<3; j++) {
+			//	fprintf(file, " %f ", ptPtr[j]);
+			//}
 		}
 		fprintf(file, "\\n");
 		return MStatus::kSuccess;
@@ -135,47 +147,34 @@ private:
 class setLocalCoordOp : nodeOperator{
 public:
 	setLocalCoordOp(FILE * f):file(f){};
-	MStatus operator()(std::shared_ptr<binaryTreeNode> node);
+	MStatus operator()(std::shared_ptr<jointNode> node);
 private:
 	FILE * file;
 };
 
 class binaryTree {
 public:	
-	binaryTree():root(new binaryTreeNode(-1, std::string("world"))){
-	}
+	binaryTree():root(std::make_shared<jointNode>(-1, std::string("world"))){}
 
 	~binaryTree(){}
 
-	MStatus insertNode(std::shared_ptr<binaryTreeNode> node, std::string parentName);
+	MStatus insertNode(std::shared_ptr<jointNode> node, std::string parentName);
 	
-	template <class nodeOperator>
-	MStatus traverse(std::shared_ptr<binaryTreeNode> root, nodeOperator& ope);
+	MStatus traverse(std::shared_ptr<jointNode> root, nodeOperator& ope);
 
-	template <class nodeOperator>
-	MStatus find(std::shared_ptr<binaryTreeNode> root, nodeOperator& ope, unsigned int & level, std::shared_ptr<binaryTreeNode> & result);
+	MStatus find(std::shared_ptr<jointNode> root, nodeOperator& ope, unsigned int & level, std::shared_ptr<jointNode> & result);
 
-	std::shared_ptr<binaryTreeNode> root;
+	bool iterativeInsert(std::shared_ptr<jointNode> root, std::shared_ptr<jointNode> node, std::string parentName);
+
+	MStatus update();
 private:
-	bool iterativeInsert(std::shared_ptr<binaryTreeNode> root, std::shared_ptr<binaryTreeNode> node, std::string parentName);
+	std::shared_ptr<jointNode> root;
 };
 
-template <class nodeOperator>
-MStatus binaryTree::traverse(std::shared_ptr<binaryTreeNode> root, nodeOperator& ope){
-	if (root){
-		ope(root);
-	}
-	if (root->sibling){	// handle sibling 
-		traverse(root->sibling, ope);
-	}
-	if(root->child){	// handle child
-		traverse(root->child, ope);
-	}
-	return MStatus::kSuccess;
-}
+
 
 template <class nodeOperator>
-MStatus binaryTree::find(std::shared_ptr<binaryTreeNode> root, nodeOperator& ope, unsigned int & level, std::shared_ptr<binaryTreeNode> & result){
+MStatus binaryTree::find(std::shared_ptr<jointNode> root, nodeOperator& ope, unsigned int & level, std::shared_ptr<jointNode> & result){
 	if (root){
 		if (ope(root) == MStatus::kSuccess){
 			result = root;

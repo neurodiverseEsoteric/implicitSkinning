@@ -1,9 +1,25 @@
 #include "tree.h"
 
-bool binaryTree::iterativeInsert(std::shared_ptr<binaryTreeNode> root, std::shared_ptr<binaryTreeNode> node, std::string parentName){
+MStatus binaryTree::traverse(std::shared_ptr<jointNode> root, nodeOperator& ope){
+	if (root){
+		if (ope(root) == MStatus::kFailure)
+			return MStatus::kFailure;
+	}
+	if (root->sibling){	// handle sibling 
+		if (traverse(root->sibling, ope) == MStatus::kFailure)
+			return MStatus::kFailure;
+	}
+	if(root->child){	// handle child
+		if (traverse(root->child, ope) == MStatus::kFailure)
+			return MStatus::kFailure;
+	}
+	return MStatus::kSuccess;
+}
+
+bool binaryTree::iterativeInsert(std::shared_ptr<jointNode> root, std::shared_ptr<jointNode> node, std::string parentName){
 	if (root->name == parentName){
 		if (root->child != NULL){
-			std::shared_ptr<binaryTreeNode> child = root->child;
+			std::shared_ptr<jointNode> child = root->child;
 			while(child->sibling != NULL)
 				child = child->sibling;
 			child->sibling = node;
@@ -25,14 +41,14 @@ bool binaryTree::iterativeInsert(std::shared_ptr<binaryTreeNode> root, std::shar
 	return false;
 }
 
-MStatus binaryTree::insertNode(std::shared_ptr<binaryTreeNode> node, std::string parentName){
+MStatus binaryTree::insertNode(std::shared_ptr<jointNode> node, std::string parentName){
 	if (iterativeInsert(root, node, parentName))
 		return MStatus::kSuccess;
 	else
 		return MStatus::kFailure;
 }
 
-MStatus setLocalCoordOp::operator()(std::shared_ptr<binaryTreeNode> node){
+MStatus setLocalCoordOp::operator()(std::shared_ptr<jointNode> node){
 	using namespace Eigen;
 
 	unsigned int m = 3;   // dimension of each point

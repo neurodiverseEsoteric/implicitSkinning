@@ -27,8 +27,11 @@
 #include <maya/MFloatPoint.h>
 #include <maya/MFloatPointArray.h>
 #include <maya/MFnMesh.h>
+#include <maya/MItMeshVertex.h>
+#include <maya/MItSelectionList.h>
 
 #include "tree.h"
+#include "Table.h"
 
 #define CheckError(stat,msg)		\
 	if ( MS::kSuccess != stat ) {	\
@@ -132,19 +135,16 @@ MStatus exportSkinClusterData::doIt( const MArgList& args )
 		return stat;
 	}
 
-	unsigned int count = 0;
+	// only one treeList for the scene
+	std::shared_ptr<std::vector<std::shared_ptr<binaryTree>>> treeList;
 
-	// TODO : modify the tree structure, now noly consider the situation 
-	//	that only one skincluster exists in the scene
-	std::shared_ptr<binaryTree> tree(new binaryTree());
 
 	// Iterate through graph and search for skinCluster nodes
 	MItDependencyNodes iter( MFn::kInvalid);
 	for ( ; !iter.isDone(); iter.next() ) {
 		MObject object = iter.item();
 		if (object.apiType() == MFn::kSkinClusterFilter) {
-			count++;
-
+			
 			// For each skinCluster node, get the list of influence objects
 			MFnSkinCluster skinCluster(object);
 			MDagPathArray infs;
@@ -158,30 +158,37 @@ MStatus exportSkinClusterData::doIt( const MArgList& args )
 			}
 
 
-			// set up joint heritage tree for this skinCluster
-			for (unsigned int k = 0; k < nInfs; ++k) {
-				MFnIkJoint fnJoint(infs[k]);
-				if ( fnJoint.parentCount() ) {
-					// Assume any joint can has only one parent parent joint
-					MObject parent = fnJoint.parent(0);
-					MFnDagNode fnParent(parent);
-					std::shared_ptr<binaryTreeNode> node(new binaryTreeNode(k, infs[k].partialPathName().asChar(), fnJoint.transformation().asMatrix()));
-
-					tree->insertNode(node, fnParent.name().asChar());
-
-				} else {
-					CheckError(stat,"Error: Node has no parent found.");
-				}
-			}
-			// check for joint's heritage matrix 
-			#ifdef _DEBUG
-				tree->traverse(tree->root, printOp(file));
-			#endif
-			
-
 			// loop through the geometries affected by this cluster
 			unsigned int nGeoms = skinCluster.numOutputConnections();
 			for (unsigned int i = 0; i < nGeoms; ++i) {
+
+				// construct a tree node for each geometry
+				std::shared_ptr<binaryTree> tree(new binaryTree());
+				// set up joint heritage tree for this skinCluster
+				for (unsigned int k = 0; k < nInfs; ++k) {
+					MFnIkJoint fnJoint(infs[k]);
+					if ( fnJoint.parentCount() ) {
+						// Assume any joint can has only one parent parent joint
+						MObject parent = fnJoint.parent(0);
+						MFnDagNode fnParent(parent);
+						std::shared_ptr<binaryTreeNode> node(new binaryTreeNode(k, infs[k].partialPathName().asChar(), fnJoint.transformation().asMatrix()));
+
+						tree->insertNode(node, fnParent.name().asChar());
+
+					} else {
+						CheckError(stat,"Error: Node has no parent found.");
+					}
+				}
+				// check for joint's heritage matrix 
+				#ifdef _DEBUG
+				tree->traverse(tree->root, printOp(file));
+				#endif
+				// append to the treeList
+				treeList->push_back(tree);
+
+
+				// get the geometry's info\
+				//
 				unsigned int index = skinCluster.indexForOutputConnection(i,&stat);
 				CheckError(stat,"Error getting geometry index.");
 
@@ -195,122 +202,142 @@ MStatus exportSkinClusterData::doIt( const MArgList& args )
 				MFloatPointArray vertexList;
 				fnMesh.getPoints( vertexList, MSpace::kWorld );
 
-				// initialize the non-repetitive point set for current geom
-				std::set<unsigned int> pointSet;
-				std::pair<std::set<unsigned int>::iterator,bool> insertResult;
-
 				// iterate through the components of this geometry
-				MItMeshPolygon meshIter(skinPath);
+				MItMeshVertex vertexIter(skinPath);
+
+				// set up mesh factory for this polygon mesh
+				meshTableFactory mFactory(nInfs);
+				mFactory.meshInit(vertexIter);
+				std::shared_ptr<meshTable> mTable = mFactory.getMeshTable();
+
+				// set up jointFactory
+				jointsTableFactory mJointFactory(nInfs);
 
 				// print out the path name of current skin mesh
 				#ifdef _DEBUG
-					fprintf(file, "%s %d %u \n",skinPath.partialPathName().asChar(), meshIter.count(), nInfs);
+					fprintf(file, "%s %d %u \n",skinPath.partialPathName().asChar(), vertexIter.count(), nInfs);
 				#endif
 
-				double maxFaceArea = -1;
-				for ( /* nothing */ ; !meshIter.isDone(); meshIter.next() ) {
-					// Get the weights for this face (one per influence object)
-					MObject face = meshIter.currentItem(&stat);
+				for ( /* nothing */ ; !vertexIter.isDone(); vertexIter.next()) {
+
+					// Get the weights for this vertex (one weight per influence object)
+					MObject vertex = vertexIter.currentItem(&stat);
 					CheckError(stat,"Error getting component.");
 
 					MDoubleArray wts;
 					unsigned int infCount;
-					stat = skinCluster.getWeights(skinPath,face,wts,infCount);
+					stat = skinCluster.getWeights(skinPath,vertex,wts,infCount);
 					CheckError(stat,"Error getting weights.");
 
 					if (0 == infCount) {
 						stat = MS::kFailure;
 						CheckError(stat,"Error: 0 influence objects.");
 					}
+										
+					// push the weights into meshTable factory
+					mFactory.addWeights(wts);
+		
+				} // vertexIter 
 
-					
-					// find the first two max weight values and the corresponding indices
-					// Assume that there are at most two biggest weights which may be equal
-					
-					// #undef min  //for std::numeric_limit<float>::min()
-					
-					unsigned int resultIndex = 0;
-					std::shared_ptr<binaryTreeNode> maxEffectJoint;	
+				// TODO : add concrete derived class of computeController
+				computeController controller;
+				mFactory.processWeights<computeController>(controller);
+				
 
-					// current vertex has more than one influence joints
-					if (infCount > 1){	
-						unsigned int maxIndex1 = 0, maxIndex2 = 1;
-						double max1 = wts[0], max2 = wts[1];
-						for (unsigned int j = 1; j < infCount ; ++j ) {
-							if ( max1 < wts[j]){
-								max2 = max1;
-								maxIndex2 = maxIndex1;
-								max1 = wts[j];
-								maxIndex1 = j;
-							}
-							else if ( max2 < wts[j] ){
-								max2 = wts[j];
-								maxIndex2 = j;
-							}
-						}
-						std::shared_ptr<binaryTreeNode> result1, result2;
-						if (max1 == max2){
-							unsigned int level1 = 0, level2 = 0;
-							tree->find(tree->root, findLevelOp(maxIndex1), level1, result1);
-							tree->find(tree->root, findLevelOp(maxIndex1), level2, result2);
-							if (level1 > level2){ // max1' level is higher than max2's 
-								resultIndex = maxIndex2;
-								maxEffectJoint = result2;
-							}
+				//  convert the vertices into meshes, and then take sample 
+				// points according to polygon face area for each joint
+				MSelectionList singleVertexList;
+				std::set<unsigned int> pointSet;
+				unsigned int start = 0;
+				MString meshName = skinPath.fullPathName();
+				for ( unsigned int i = 1; i <= mFactory._numJoints; i++ ){
+					singleVertexList.clear();
+					pointSet.clear();
+
+					// handle joints one by one, first select current joint' affected most vertex
+					unsigned int length = mTable->pointIdxTable.size();
+					for ( unsigned int j = start; j < length; j++){
+						if ( mTable->ptJointIdxTable[j] == i ){
+							MString vertexName = meshName;
+							vertexName += ".vtx[";
+							pointSet.insert(mTable->pointIdxTable[j]);
+							vertexName += mTable->pointIdxTable[j];
+							vertexName += "]";
+							singleVertexList.add(vertexName);
 						}
 						else {
-							resultIndex = maxIndex1;
-							unsigned int level1 = 0;
-							tree->find(tree->root, findLevelOp(maxIndex1), level1, result1);
-							maxEffectJoint = result1;
+							start = j;
+							break;
 						}
-					}else{ // current vertex has only one influence joints
-						maxEffectJoint = tree->root->child;
 					}
+					
+
+					MObject multiVertexComponent, singleVertexComponent;
+					int dummyIndex;
+					double maxArea = -1;
+					MItMeshPolygon faceIter(skinPath);
+					std::vector<unsigned int> faceIdxs;
+					faceIdxs.reserve(faceIter.count());
+					std::vector<double> faceAreas;
+					faceAreas.reserve(faceIter.count());
+					 
+					// loop through the faces which have selected points
+					for (MItSelectionList vertexComponentIter(singleVertexList, MFn::kMeshVertComponent); !vertexComponentIter.isDone(); vertexComponentIter.next()){
+						// STORE THE DAGPATH, COMPONENT OBJECT AND MESH NAME OF THE CURRENT VERTEX COMPONENT:
+						vertexComponentIter.getDagPath(skinPath, multiVertexComponent);
+
+						// VERTEX COMPONENT HAS TO CONTAIN AT LEAST ONE VERTEX:
+						if (!multiVertexComponent.isNull()){
+							// ITERATE THROUGH EACH "VERTEX" IN THE CURRENT VERTEX COMPONENT:
+							for (MItMeshVertex vertexIter(skinPath, multiVertexComponent); !vertexIter.isDone(); vertexIter.next()){
+
+								// get current vertex' connected faces
+								MIntArray connectedFacesIndices;
+								vertexIter.getConnectedFaces(connectedFacesIndices);
+
+								for (unsigned i=0; i<connectedFacesIndices.length(); i++){
+									faceIter.setIndex(connectedFacesIndices[i], dummyIndex);
+									MIntArray faceVerticesIndices;
+									faceIter.getVertices(faceVerticesIndices);
+
+									unsigned int totalPts = faceVerticesIndices.length();
+									unsigned int notFoundNum = 0;
+									for (unsigned int k = 0; k < totalPts; k++){
+										auto resutl = pointSet.find(faceVerticesIndices[k]);
+										if (resutl == pointSet.end()){
+											notFoundNum++;
+										}
+									}
+									// TODO : only consider triangle face now. 
+									if ( float(notFoundNum)/ totalPts < 0.5 && !faceIter.zeroArea() ){
+										// accept the face 
+										double area(0);
+										faceIter.getArea(area);
+										if ( area > maxArea )
+											maxArea = area;
+										faceIdxs.push_back(faceIter.index());
+										faceAreas.push_back(area);
+									}
+								} // filter every faces connected to current vertex 
+
+							} // for MItMeshVertex
+
+						} // if multiVertexComponent
+
+					}// for vertexComponentIter
 
 					// TODO : allow user to interactively add or remove influenced meshes for each joint
 
 
-					// add current face'points to mfloatpointarray
-					MIntArray vertexIdxs;
-					meshIter.getVertices( vertexIdxs );
-
-
-					// TODO : there are some points lost and do not belong to any joint. why? 
-					for (unsigned int k = 0;k < vertexIdxs.length(); k++ )
-					{
-						// process a face' points
-						insertResult = pointSet.insert(vertexIdxs[k]);
-						if (insertResult.second){ // the point does not exist in the set
-							if (maxEffectJoint && maxEffectJoint->points){ // TODO why there will be crash here ? 
-								MFloatPoint point = vertexList[vertexIdxs[k]];
-								maxEffectJoint->points->append(point);
-							}
-						}
+					// normalize the face areas
+					for (auto iter = faceAreas.begin(); iter != faceAreas.end(); iter++) {
+						(*iter) /= maxArea;
 					}
+
+					computeController controller;
+					mJointFactory.addJointTable<computeController>(faceIter, faceIdxs, faceAreas, controller);
 					
-					
-					// TODO :  get the biggest face area
-					double area = 0;
-					if (! meshIter.zeroArea()){
-						meshIter.getArea(area);
-						if (area > maxFaceArea)
-							maxFaceArea = area;
-						if (maxEffectJoint && maxEffectJoint->points){
-							maxEffectJoint->meshIdxs->push_back(std::make_pair(meshIter.index(),area));
-						}
-					}
-				} // meshIter 
-
-				
-				// TODO : sampling points according to polygon face area for each joint
-				
-
-
-				// calculate the local coordinate for each joint by pca method
-				
-
-
+				} // for each joint
 
 			} // loop through the geometries
 
@@ -318,13 +345,14 @@ MStatus exportSkinClusterData::doIt( const MArgList& args )
 
 	} // loop through the nodes in the scene 
 
-	if (0 == count) {
-		displayError("No skinClusters found in this scene.");
+	if (treeList->size() == 0) {
+		displayError("No skinClusters or influenced geometries found in this scene.");
 	}
 
 	// check for each joint' influenced points
 	#ifdef _DEBUG
-		tree->traverse(tree->root, checkPointGrouplOp(file));
+	for (std::vector<std::shared_ptr<binaryTree>>::iterator it = treeList->begin() ; it != treeList->end(); ++it)
+		(*it)->traverse((*it)->root, checkPointGrouplOp(file));
 	#endif
 
 	fclose(file);

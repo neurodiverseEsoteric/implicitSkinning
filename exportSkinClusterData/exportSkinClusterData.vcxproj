@@ -16,10 +16,16 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="exportSkinClusterDataCmd.cpp" />
+    <ClCompile Include="Table.cpp" />
+    <ClCompile Include="Transform.cpp" />
     <ClCompile Include="tree.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="computeController.h" />
+    <ClInclude Include="Table.h" />
+    <ClInclude Include="Transform.h" />
     <ClInclude Include="tree.h" />
+    <ClInclude Include="Vector.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <Keyword>Win32Proj</Keyword>
