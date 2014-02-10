@@ -1,0 +1,18 @@
+Project overview:
+Try to implement the sig 13 paper implicit skinning. It is consisted of two maya command plug-ins. The workflow is described below :
+command 1:
+包括gui界面的command（使用pyqt和c++）
+调整到开始帧
+parse 整个场景中的skincluster，建立parent-child tree，计算matrix
+将面上的点按照joint权重分类
+交互调整各个joint所属的点或面
+得到样本点
+计算rbf系数
+将数据线性化，建立两个linklist，存储各个skincluster和对应的meshtable
+数据缓存到文件或者内存
+
+command 2:
+得到各个joint的变化matrix和面上点的position信息
+动画的时候进行旋转各个local的坐标系
+判断属于每个joint的mesh点是否在rbf场相交的区域内(在两个场的封闭的圆柱体内）
+对于在相交区域内的点，在点所在位置（相对于local transform matrix）进行融合场的计算，进行project和relax
