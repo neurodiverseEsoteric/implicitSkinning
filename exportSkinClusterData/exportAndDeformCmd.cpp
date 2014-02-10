@@ -31,8 +31,16 @@
 #include <maya/MItSelectionList.h>
 #include <maya/MDagPathArray.h>
 
+#include <boost/interprocess/managed_shared_memory.hpp> 
+
 #include "tree.h"
 #include "Table.h"
+
+///////////////////////////////////////////////////////
+//
+// DESCRIPTION:  exportSkinClusterData command
+//
+///////////////////////////////////////////////////////
 
 
 class exportSkinClusterData : public MPxCommand
@@ -72,6 +80,13 @@ bool exportSkinClusterData::isUndoable() const
 
 MStatus exportSkinClusterData::undoIt()
 {
+	return MS::kSuccess;
+}
+
+MStatus exportSkinClusterData::redoIt()
+{
+	clearResult();
+	setResult( (int) 1);
 	return MS::kSuccess;
 }
 
@@ -129,6 +144,10 @@ MStatus exportSkinClusterData::doIt( const MArgList& args )
 	if (stat != MS::kSuccess) {
 		return stat;
 	}
+
+	// Remember the frame the scene was at so we can restore it later.
+	MTime currentFrame = MAnimControl::currentTime();
+	MGlobal::viewFrame(sceneList::readSceneStartFrame());
 
 
 	// allocate memory by IPC
@@ -235,30 +254,125 @@ MStatus exportSkinClusterData::doIt( const MArgList& args )
 	// otherwise all the object are store by IPC in the memory with tag.
 	// sceneList::writeToBuffer();
 
+	// Return to the frame we were at before we ran command
+	MGlobal::viewFrame (currentFrame);
+
 	fclose(file);
 	return MS::kSuccess;
 }
 
-MStatus exportSkinClusterData::redoIt()
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////
+//
+// DESCRIPTION:  rbfDeform command
+//
+///////////////////////////////////////////////////////
+
+class rbfDeform : public MPxCommand
+{
+public:
+	rbfDeform(){};
+	virtual     ~rbfDeform(){};
+
+	MStatus     doIt ( const MArgList& args );
+	MStatus     redoIt ();
+	MStatus     undoIt ();
+	bool        isUndoable() const;
+	static      void* creator();
+};
+
+void* rbfDeform::creator()
+{
+	return new rbfDeform;
+}
+
+bool rbfDeform::isUndoable() const
+{
+	return false;
+}
+
+MStatus rbfDeform::undoIt()
+{
+	return MS::kSuccess;
+}
+
+MStatus rbfDeform::redoIt()
 {
 	clearResult();
 	setResult( (int) 1);
 	return MS::kSuccess;
 }
 
+MStatus rbfDeform::doIt( const MArgList& args ){
+	MStatus   status = MStatus::kSuccess;
+
+	MTime currentFrame = MAnimControl::currentTime();
+
+	// read data from the shared memory or file
+	boost::interprocess::managed_shared_memory ipcMemo(boost::interprocess::open_read_only, "sceneMemory");
+	// 
+
+
+	// update the joint matrix
+	
+
+	// update the local coord
+	
+
+
+	// filter the vertices of each mesh which is inside of the intersection region of adjacent joints
+
+
+
+	// get the position of these vertices
+	
+
+
+	// calculate the position for each vertex ( project and relax )
+
+
+
+	// set the final position for each mesh object
+
+
+
+	// display result
+	MString msg = "rbfDeform deform the mesh at " + (int) currentFrame.asUnits(MTime::uiUnit());
+	msg += " frame.\n";
+	MGlobal::displayInfo(msg);
+
+	setResult(msg);
+
+	return status;
+}
+
+
 MStatus initializePlugin( MObject obj )
 {
-	MStatus   status;
-	MFnPlugin plugin( obj, PLUGIN_COMPANY, "3.0", "Any");
+	MStatus   status = MStatus::kSuccess;
 
+	MFnPlugin plugin( obj, PLUGIN_COMPANY, "3.0", "Any");
 	status = plugin.registerCommand( "exportSkinClusterData", exportSkinClusterData::creator );
 	if (!status) {
 		status.perror("registerCommand");
 		return status;
 	}
 
+	status = plugin.registerCommand( "rbfDeform", rbfDeform::creator );
+	if (!status) {
+		status.perror("deregisterCommand");
+		return status;
+	}
+
 	return status;
 }
+
 
 MStatus uninitializePlugin( MObject obj )
 {
@@ -269,5 +383,12 @@ MStatus uninitializePlugin( MObject obj )
 	if (!status) {
 		status.perror("deregisterCommand");
 	}
+
+	status = plugin.deregisterCommand( "rbfDeform" );
+	if (!status) {
+		status.perror("deregisterCommand");
+		return status;
+	}
+
 	return status;
 }

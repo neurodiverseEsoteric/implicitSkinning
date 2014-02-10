@@ -15,7 +15,7 @@
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="exportSkinClusterDataCmd.cpp" />
+    <ClCompile Include="exportAndDeformCmd.cpp" />
     <ClCompile Include="Table.cpp" />
     <ClCompile Include="Transform.cpp" />
     <ClCompile Include="tree.cpp" />
@@ -56,6 +56,8 @@
     <TargetExt>.mll</TargetExt>
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
     <IntDir>$(Configuration)\</IntDir>
+    <IncludePath>D:\Program Files\boost_1_55_0;D:\Program Files\eigen;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\Program Files\boost_1_55_0\bin\vc10\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>

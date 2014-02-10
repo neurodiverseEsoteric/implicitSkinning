@@ -312,3 +312,46 @@ bool sceneList::processSamples(const computeController & controller){
 		iter->second->processSamples(controller);
 	}
 }
+
+
+MStatus sceneList::nodeFromName(MString name, MObject & obj)
+{
+	MSelectionList tempList;
+	tempList.add( name );
+	if ( tempList.length() > 0 ) 
+	{
+		tempList.getDependNode( 0, obj );
+		return MS::kSuccess;
+	}
+	return MS::kFailure;
+}
+
+
+double sceneList::readSceneStartFrame()
+{
+	MTime startFrame;
+
+	// Get the render globals node
+	int rangeIsSet = 0;
+	MObject renderGlobNode;
+	if (nodeFromName("defaultRenderGlobals", renderGlobNode) == MS::kSuccess)
+	{
+		MFnDependencyNode fnRenderGlobals( renderGlobNode );
+
+		// Check if the renderGlobals is used for the frame range
+		MPlug animPlug = fnRenderGlobals.findPlug( "animation" );
+		short anim;
+		animPlug.getValue( anim );
+
+		if ( anim ) {
+			float byFrame;
+			fnRenderGlobals.findPlug("startFrame").getValue(startFrame);
+			rangeIsSet = 1;
+		}
+	}
+	if (!rangeIsSet)	{
+		// USE_TIMESLIDER
+		startFrame = MAnimControl::minTime();
+	}
+	return (int) startFrame.as( MTime::uiUnit() );
+}

@@ -23,7 +23,9 @@
 #include <maya/MFnSkinCluster.h>
 #include <maya/MDoubleArray.h>
 #include <maya/MGlobal.h>
-#include <MSelectionList.h>
+#include <maya/MSelectionList.h>
+#include <maya/MAnimControl.h>
+#include <maya/MTime.h>
 
 // include Eigen
 #include <Eigen/Core>
@@ -175,9 +177,10 @@ public:
 	static bool processWeights(const computeController & controller);
 	static bool processSamples(const computeController & controller);
 	static bool modifyMeshNodeGroup();			// modify through GUI
-	static bool writeToBuffer();
-
+	static MStatus nodeFromName(MString name, MObject & obj);
+	static double readSceneStartFrame();
 private:
+	sceneList(){};
 	static std::shared_ptr<std::list<std::pair<std::shared_ptr<skinClusterNode>, std::shared_ptr<skinNode>>>> scene;
 };
 
