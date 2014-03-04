@@ -14,5 +14,5 @@ parse 整个场景中的skincluster，建立parent-child tree，计算matrix
 command 2:
 得到各个joint的变化matrix和面上点的position信息
 动画的时候进行旋转各个local的坐标系
-判断属于每个joint的mesh点是否在rbf场相交的区域内(在两个场的封闭的圆柱体内）
+在相邻joint之间建立sphere，确保它们在初始状态不碰撞，骨骼中间用cylinder代表。平时仅计算sphere内的点的融合，运动时用bullet计算整体的新增的collision，对新增的碰撞物体进行融合。
 对于在相交区域内的点，在点所在位置（相对于local transform matrix）进行融合场的计算，进行project和relax
