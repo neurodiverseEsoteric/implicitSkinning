@@ -16,3 +16,23 @@ command 2:
 动画的时候进行旋转各个local的坐标系
 在相邻joint之间建立sphere，确保它们在初始状态不碰撞，骨骼中间用cylinder代表。平时仅计算sphere内的点的融合，运动时用bullet计算整体的新增的collision，对新增的碰撞物体进行融合。
 对于在相交区域内的点，在点所在位置（相对于local transform matrix）进行融合场的计算，进行project和relax
+
+
+CUDPPSortConfig sortConfig;
+	sortConfig.numElements = faceNum3;
+	sortConfig.datatype = CUDPP_UINT;
+	sortConfig.sortAlgorithm = CUDPP_SCAN;
+
+	CUDPPScanConfig scanConfig;
+	scanConfig.direction = CUDPP_SCAN_FORWARD;
+	scanConfig.exclusivity = CUDPP_SCAN_EXCLUSIVE;
+	scanConfig.maxNumElements = faceNum3;
+	scanConfig.maxNumRows = 1;
+	scanConfig.datatype = CUDPP_UINT;
+	scanConfig.op = CUDPP_ADD;
+	cudppInitializeScan(&scanConfig);
+
+	sortConfig.scanConfig = &scanConfig;
+
+	cudppSort(sorted, key, temp1, temp2, &sortConfig, 0);
+	cudppFinalizeScan(sortConfig.scanConfig);

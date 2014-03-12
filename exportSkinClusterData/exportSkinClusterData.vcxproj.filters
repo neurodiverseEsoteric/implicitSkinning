@@ -23,33 +23,27 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="tree.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Transform.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Table.cpp">
+    <ClCompile Include="scene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="exportAndDeformCmd.cpp">
+    <ClCompile Include="implicitSkinningCmds.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="tree.h">
+    <ClInclude Include="scene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Vector.h">
+    <ClInclude Include="common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Transform.h">
+    <ClInclude Include="transform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Table.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="computeController.h">
+    <ClInclude Include="mayaSceneParser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

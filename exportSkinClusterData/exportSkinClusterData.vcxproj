@@ -15,21 +15,20 @@
     <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="exportAndDeformCmd.cpp" />
-    <ClCompile Include="Table.cpp" />
+    <ClCompile Include="implicitSkinningCmds.cpp" />
     <ClCompile Include="Transform.cpp" />
-    <ClCompile Include="tree.cpp" />
+    <ClCompile Include="scene.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="computeController.h" />
-    <ClInclude Include="Table.h" />
-    <ClInclude Include="Transform.h" />
-    <ClInclude Include="tree.h" />
-    <ClInclude Include="Vector.h" />
+    <ClInclude Include="common.h" />
+    <ClInclude Include="mayaSceneParser.h" />
+    <ClInclude Include="scene.h" />
+    <ClInclude Include="transform.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{59A283AB-90F3-4B61-A970-3584F2C0C6FF}</ProjectGuid>
+    <ProjectName>implicitSkinningCmds</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
@@ -73,7 +72,7 @@
       <MinimalRebuild>true</MinimalRebuild>
       <BufferSecurityCheck>true</BufferSecurityCheck>
       <AdditionalOptions>%(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>D:\Workspace\exportSkinClusterData\exportSkinClusterData\exportSkinClusterData;.;C:\Program Files\Autodesk\Maya2014\include;D:\Program Files\eigen;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Workspace\exportSkinClusterData\exportSkinClusterData\exportSkinClusterData;.;C:\Program Files\Autodesk\Maya2014\include;D:\Program Files\eigen;D:\OSS\boost_1_55_0\x64\release\include\boost-1_55;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderOutputFile>$(Configuration)\exportSkinClusterData.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
@@ -82,7 +81,7 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <AdditionalOptions>/export:initializePlugin /export:uninitializePlugin %(AdditionalOptions)</AdditionalOptions>
       <AdditionalDependencies>Foundation.lib;OpenMaya.lib;OpenMayaAnim.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\Program Files\Autodesk\Maya2014\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>D:\OSS\boost_1_55_0\x64\release\lib;C:\Program Files\Autodesk\Maya2014\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <OutputFile>$(Configuration)\exportSkinClusterData.mll</OutputFile>
       <ImportLibrary>$(Configuration)\exportSkinClusterData.lib</ImportLibrary>
       <ProgramDatabaseFile>$(Configuration)\exportSkinClusterData.pdb</ProgramDatabaseFile>

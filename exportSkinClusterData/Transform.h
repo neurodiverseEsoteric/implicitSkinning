@@ -1,17 +1,8 @@
-#if defined(_MSC_VER)
-#pragma once
-#endif
-
 #ifndef TRANSFORM_H
 #define TRANSFORM_H
 
-#include <math.h>
-#include <stdio.h>
-#include<string.h>	// for memcpy
-#include "Vector.h"
-
 // Matrix4x4 Declarations
-struct Matrix4x4 {
+class Matrix4x4 {
 	// Matrix4x4 Public Methods
 	Matrix4x4() {
 		m[0][0] = m[1][1] = m[2][2] = m[3][3] = 1.f;
