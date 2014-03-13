@@ -1,26 +1,15 @@
-
-#include <maya/MDoubleArray.h>
-#include <maya/MObjectArray.h>
-#include <maya/MItDependencyNodes.h>
-#include <maya/MItGeometry.h>
-#include <maya/MFnSkinCluster.h>
-#include <maya/MFnSingleIndexedComponent.h>
-#include <maya/MIOStream.h>
-
-
-#include <math.h>
-#include <map>
-#include <boost/interprocess/managed_shared_memory.hpp> 
-//#include <boost/functional/hash.hpp>
-
-#include "common.h"
-#include "Table.h"
-
 ///////////////////////////////////////////////////////
 //
 // DESCRIPTION:  implicitSkinningPrep command
 //
 ///////////////////////////////////////////////////////
+
+//#include <maya/MItGeometry.h>
+//#include <maya/MFnSingleIndexedComponent.h>
+
+#include "common.h"
+#include "mayaSceneParser.h"
+#include "sceneData.h"
 
 
 class implicitSkinningPrep : public MPxCommand
@@ -208,6 +197,7 @@ MStatus implicitSkinningPrep::doIt( const MArgList& args )
 	MItSelectionList iter(sl, MFn::kSkinClusterFilter, &stat);
 	MCheckStatus(stat,"ERROR filter kSkinClusterFilter objects");
 
+	// loop through the skinCluster nodes in the scene
 	for ( ; !iter.isDone(); iter.next() ) {
 		MObject object;
 		iter.getDependNode(object);
@@ -216,11 +206,7 @@ MStatus implicitSkinningPrep::doIt( const MArgList& args )
 		MFnSkinCluster	skinCluster(object);
 		MDagPathArray	jointArray;
 		unsigned int	numJoints = skinCluster.influenceObjects(jointArray, &stat);
-		MCheckStatus(stat,"Error: getting joints.");
-		if (0 == numJoints) {
-			stat = MS::kFailure;
-			MCheckStatus(stat,"Error: No joints in this skinCluster found.");
-		}
+		assert (numJoints != 0);
 
 		// set up the joint linear tree representation for current skinCluster node
 		for (unsigned int i = 0; i < numJoints; i++) {
@@ -230,9 +216,9 @@ MStatus implicitSkinningPrep::doIt( const MArgList& args )
 		}
 			
 
-		// loop through the geometries affected by this cluster
+		// loop through the geometries of current skinCluster
 		unsigned int nGeoms = skinCluster.numOutputConnections();
-		for (unsigned int i = 0; i < nGeoms; ++i) {
+		for (unsigned int i = 0; i < nGeoms; ++i) {	
 
 			// push the skin-mesh and skinCluster pair into scene
 			unsigned int index = skinCluster.indexForOutputConnection(i, &stat);
@@ -243,43 +229,35 @@ MStatus implicitSkinningPrep::doIt( const MArgList& args )
 			stat = skinCluster.getPathAtIndex(index,skinPath);
 			MCheckStatus(stat,"Error getting geometry path.");
 
-			// insert vertices index on each polymesh into meshData. 
-			// it is to be used to find neighbourhood of each vertex
-			mayaSceneParser::insertMesh(skinPath);
+			// insert vertices' info into meshData. 
+			mayaSceneParser::insertMesh(skinCluster, skinPath);
 			
+		} // loop through the geometries of current skinCluster
 
-			skNode->addWeights();
-			skNode->addNeighbors();
+	} // loop through the skinCluster nodes in the scene 
 
-			// push the skinClusterNode-skinMeshNode pair into the scene
-			scene->push_back(std::pair<skinClusterNode, skinNode>(scNode, skNode));
+	sceneData::processNeighbours();
+	sceneData::processSamples();
 
-		} // loop through the geometries
+	// let user to adjust selection interactively
+	while ( sceneList::modifyMeshNodeGroup() ){	// user modified 
+		// mark the mesh-joint pairs modified
 
-	} // loop through the nodes in the scene 
-	
-	if (scene->size() == 0) {
-		displayError("No skinClusters found in this scene.");
+		// overload function to handle only modified parts
+		sceneData::processNeighbours();
+		sceneData::processSamples();
 	}
-	
 
-	// set up mesnNode list for each skin mesh according to each vertex's weights 
-	sceneList::processWeights(controller);
+	// finishe preparation by generate the RBD object for collision and other things 
+	if (sceneData::fininalPrep() ){
 
-	// TODO let user to interactively adjust vertex group
-	sceneList::modifyMeshNodeGroup();
+	}
 
-	// set rbf params and local coord based on meshNode' vertexs
-	sceneList::processSamples(controller);
-
-	
-	// when needed, write the scene object into a file by serialization.
-	// otherwise all the object are store by IPC in the memory with tag.
-	// sceneList::writeToBuffer();
-
+	sceneList::writeToBuffer();
 
 	// Restore back to the frame we were at before we ran command
 	MGlobal::viewFrame (currentFrame);
+
 	return MS::kSuccess;
 }
 

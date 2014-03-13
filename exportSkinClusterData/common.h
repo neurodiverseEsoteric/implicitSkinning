@@ -16,18 +16,15 @@
 #include <maya/MAnimControl.h>
 #include <maya/MItSelectionList.h>
 #include <maya/MDagPathArray.h>
-
-#include <maya/MItMeshPolygon.h>
+#include <maya/MItMeshVertex.h>
 #include <maya/MFnIkJoint.h>
 #include <maya/MFloatPoint.h>
 #include <maya/MFloatPointArray.h>
+#include <maya/MFnSkinCluster.h>
+#include <maya/MDoubleArray.h>
+#include <maya/MItMeshPolygon.h>
 #include <maya/MFnMesh.h>
-#include <maya/MItMeshVertex.h>
 
-
-#include "scene.h"
-#include "transform.h"
-#include "mayaSceneParser.h"
 
 //#include <limits>       // std::numeric_limits
 

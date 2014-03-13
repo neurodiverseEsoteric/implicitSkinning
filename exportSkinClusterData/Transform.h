@@ -115,10 +115,13 @@ public:
 		float la2 = (*this)(Vector(1,0,0)).LengthSquared();
 		float lb2 = (*this)(Vector(0,1,0)).LengthSquared();
 		float lc2 = (*this)(Vector(0,0,1)).LengthSquared();
-#define NOT_ONE(x) ((x) < .999f || (x) > 1.001f)
-		return (NOT_ONE(la2) || NOT_ONE(lb2) || NOT_ONE(lc2));
-#undef NOT_ONE
+
+		#define NOT_ONE(x) ((x) < .999f || (x) > 1.001f)
+			return (NOT_ONE(la2) || NOT_ONE(lb2) || NOT_ONE(lc2));
+		#undef NOT_ONE
+
 	}
+
 	inline Point operator()(const Point &pt) const;
 	inline void operator()(const Point &pt, Point *ptrans) const;
 	inline Vector operator()(const Vector &v) const;
