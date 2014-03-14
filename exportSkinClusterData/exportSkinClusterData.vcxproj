@@ -16,6 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="implicitSkinningCmds.cpp" />
+    <ClCompile Include="jointData.cpp" />
     <ClCompile Include="mayaSceneParser.cpp" />
     <ClCompile Include="Transform.cpp" />
     <ClCompile Include="sceneData.cpp" />
@@ -23,10 +24,12 @@
   <ItemGroup>
     <ClInclude Include="common.h" />
     <ClInclude Include="jointData.h" />
+    <ClInclude Include="localCoord.h" />
     <ClInclude Include="mayaSceneParser.h" />
     <ClInclude Include="meshData.h" />
     <ClInclude Include="sceneData.h" />
     <ClInclude Include="transform.h" />
+    <ClInclude Include="vector.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <Keyword>Win32Proj</Keyword>

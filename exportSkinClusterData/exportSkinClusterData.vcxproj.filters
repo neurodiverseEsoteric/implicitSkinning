@@ -35,6 +35,9 @@
     <ClCompile Include="sceneData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="jointData.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.h">
@@ -53,6 +56,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="meshData.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="localCoord.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

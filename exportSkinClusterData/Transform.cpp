@@ -1,3 +1,6 @@
+#include <stdio.h>		// memcpy
+#include <utility>      // std::swap
+#include <iostream>		// cerr
 #include "transform.h"
 
 Matrix4x4::Matrix4x4(float mat[4][4]) {
@@ -44,7 +47,7 @@ Matrix4x4 Inverse(const Matrix4x4 &m) {
 						}
 					}
 					else if (ipiv[k] > 1)
-						Error("Singular matrix in MatrixInvert");
+						std::cerr << "Singular matrix in MatrixInvert" << std::endl;
 				}
 			}
 		}
@@ -52,12 +55,12 @@ Matrix4x4 Inverse(const Matrix4x4 &m) {
 		// Swap rows _irow_ and _icol_ for pivot
 		if (irow != icol) {
 			for (int k = 0; k < 4; ++k)
-				swap(minv[irow][k], minv[icol][k]);
+				std::swap(minv[irow][k], minv[icol][k]);
 		}
 		indxr[i] = irow;
 		indxc[i] = icol;
 		if (minv[icol][icol] == 0.)
-			Error("Singular matrix in MatrixInvert");
+			std::cerr << "Singular matrix in MatrixInvert" << std::endl;
 
 		// Set $m[icol][icol]$ to one by scaling row _icol_ appropriately
 		float pivinv = 1.f / minv[icol][icol];
@@ -79,7 +82,7 @@ Matrix4x4 Inverse(const Matrix4x4 &m) {
 	for (int j = 3; j >= 0; j--) {
 		if (indxr[j] != indxc[j]) {
 			for (int k = 0; k < 4; k++)
-				swap(minv[k][indxr[j]], minv[k][indxc[j]]);
+				std::swap(minv[k][indxr[j]], minv[k][indxc[j]]);
 		}
 	}
 	return Matrix4x4(minv);

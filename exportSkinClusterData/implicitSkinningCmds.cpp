@@ -7,6 +7,8 @@
 //#include <maya/MItGeometry.h>
 //#include <maya/MFnSingleIndexedComponent.h>
 
+#include <maya/MFnPlugin.h>	// for plugin, should be include only once with the plugin file 
+
 #include "common.h"
 #include "mayaSceneParser.h"
 #include "sceneData.h"
@@ -160,7 +162,7 @@ MStatus implicitSkinningPrep::parseArgs( const MArgList& args )
 		}
 	}
 
-	if (_byFrame<=0) fByFrame = 1;
+	if (_byFrame<=0) _byFrame = 1;
 
 	return MS::kSuccess;
 }
@@ -240,7 +242,7 @@ MStatus implicitSkinningPrep::doIt( const MArgList& args )
 	sceneData::processSamples();
 
 	// let user to adjust selection interactively
-	while ( sceneList::modifyMeshNodeGroup() ){	// user modified 
+	while ( sceneData::modifyMeshNodeGroup() ){	// user modified 
 		// mark the mesh-joint pairs modified
 
 		// overload function to handle only modified parts
@@ -253,7 +255,7 @@ MStatus implicitSkinningPrep::doIt( const MArgList& args )
 
 	}
 
-	sceneList::writeToBuffer();
+	sceneData::writeToBuffer();
 
 	// Restore back to the frame we were at before we ran command
 	MGlobal::viewFrame (currentFrame);
@@ -315,7 +317,7 @@ MStatus rbfDeform::doIt( const MArgList& args ){
 	MTime currentFrame = MAnimControl::currentTime();
 
 	// read data from the shared memory or file
-	boost::interprocess::managed_shared_memory ipcMemo(boost::interprocess::open_read_only, "sceneMemory");
+	// boost::interprocess::managed_shared_memory ipcMemo(boost::interprocess::open_read_only, "sceneMemory");
 	// 
 
 
@@ -358,7 +360,7 @@ MStatus initializePlugin( MObject obj )
 	MStatus   status = MStatus::kSuccess;
 
 	MFnPlugin plugin( obj, PLUGIN_COMPANY, "3.0", "Any");
-	status = plugin.registerCommand( "exportSkinClusterData", exportSkinClusterData::creator );
+	status = plugin.registerCommand( "implicitSkinningPrep", implicitSkinningPrep::creator );
 	if (!status) {
 		status.perror("registerCommand");
 		return status;
@@ -379,7 +381,7 @@ MStatus uninitializePlugin( MObject obj )
 	MStatus   status;
 	MFnPlugin plugin( obj );
 
-	status = plugin.deregisterCommand( "exportSkinClusterData" );
+	status = plugin.deregisterCommand( "implicitSkinningPrep" );
 	if (!status) {
 		status.perror("deregisterCommand");
 	}

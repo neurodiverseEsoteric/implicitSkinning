@@ -1,8 +1,9 @@
 #ifndef MAYASCENEPARSER_H
 #define MAYASCENEPARSER_H
 
-#include "common.h"
 #include <boost/functional/hash.hpp>
+#include "common.h"
+#include "sceneData.h"
 
 class mayaSceneParser {
 public:
@@ -11,7 +12,7 @@ public:
 
 	mayaSceneParser(){}
 
-	static void setScenePtr(const sceneData* const scene){_scene = scene;}
+	static void setScenePtr(sceneData* scene){ _scene = scene;}
 
 	static MStatus insertJoint(const MFnIkJoint& fnJoint);
 
@@ -23,11 +24,10 @@ private:
 		return string_hash(jointName);
 	}
 
-	static void insertJointData(const MFnIkJoint& joint);
+	static jDataPtr insertJointData(const MFnIkJoint& joint);
 
 	static sceneData* _scene;
 };
 
-sceneData* mayaSceneParser::_scene = nullptr;
 
 #endif

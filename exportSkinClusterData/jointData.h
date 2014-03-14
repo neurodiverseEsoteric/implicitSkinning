@@ -7,11 +7,12 @@
 
 class jointData {
 public:
-	typedef std::unique_ptr<std::vector<segData>> _segDataList;
-
-	jointData():_segDataList(nullptr){}
+	jointData():_segDataList(nullptr), _transform(){}
 	~jointData(){}
+	bool getLocalCoord(const segData& seg);
 
+public:
+	std::unique_ptr<std::vector<segData>> _segDataList;
 	Transform	_transform;
 	int			_parentPos;
 	int			_index;

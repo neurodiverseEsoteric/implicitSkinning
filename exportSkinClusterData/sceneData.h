@@ -24,6 +24,7 @@ public:
 	static bool	processSamples();
 	static bool	modifyMeshNodeGroup();	// TODO modify the selection of vertices of some segmented mesh
 	static bool writeToBuffer();
+	static bool fininalPrep();
 
 public:
 	static std::list<jointPtr> _joints;
@@ -36,12 +37,5 @@ private:
 	static sceneData *_instance;
 }; 
 
-sceneData *sceneData::_instance = 0; 
-
-unsigned int sceneData::_meshNum = 0;
-unsigned int sceneData::_jointNum = 0;
-
-std::list<jointData> _joints();
-std::list<segData> _meshes();
 
 #endif

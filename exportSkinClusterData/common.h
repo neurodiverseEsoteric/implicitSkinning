@@ -4,7 +4,6 @@
 #include <maya/MPxCommand.h>
 #include <maya/MStatus.h>
 #include <maya/MArgList.h>
-#include <maya/MFnPlugin.h>
 #include <maya/MObject.h>
 #include <maya/MGlobal.h>
 #include <maya/MDagPath.h>
@@ -24,7 +23,7 @@
 #include <maya/MDoubleArray.h>
 #include <maya/MItMeshPolygon.h>
 #include <maya/MFnMesh.h>
-
+#include <maya/MMatrix.h>
 
 //#include <limits>       // std::numeric_limits
 

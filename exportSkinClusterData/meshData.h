@@ -14,16 +14,16 @@ public:
 
 class meshData{
 public:
-	typedef std::unique_ptr<segData> segPtr;
+	//typedef std::unique_ptr<std::vector<segData>> segListPtr;
 	typedef std::unique_ptr<int[]> intVecPtr;
 	typedef std::unique_ptr<float[]> floatVecPtr;
 
-	meshData():_segList(), _neighbourPtr(nullptr), _weightsPtr(nullptr), _posPtr(nullptr) {}
+	meshData():/*_segListPtr(nullptr), */ _neighbourPtr(nullptr), _weightsPtr(nullptr), _posPtr(nullptr) {}
 
-	std::vector<segPtr>	_segList;
-	intVecPtr			_neighbourPtr;
-	floatVecPtr			_weightsPtr;
-	floatVecPtr			_posPtr;
+	//segListPtr		_segListPtr;
+	intVecPtr		_neighbourPtr;
+	floatVecPtr		_weightsPtr;
+	floatVecPtr		_posPtr;
 
 };
 
